@@ -2,12 +2,12 @@
 # Advent of code
 
 ```
-  *
- / \
- ---
- O O
- |-|
- \_/
+   *
+  / \
+  ---
+<|O|O|>
+ |(-)|
+  \_/
 ```
 
 This repo contains code for my AoC entries.
