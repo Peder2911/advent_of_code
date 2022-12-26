@@ -10,7 +10,9 @@ import sys
 Direction = Union[Literal["U"], Literal["R"], Literal["D"], Literal["L"]]
 HEAD = "O"
 TAIL = "z"
-TRAIL = "."
+ROPE = "*"
+TRAIL_FIRST = "."
+TRAIL_LAST = ","
 EMPTY = " "
 
 def vop(fn, a, b):
@@ -35,7 +37,7 @@ def rcontains(rect, point):
             ])
 
 def parse(cmd):
-    number,direction = cmd
+    direction, number = cmd.split()
     magnitude = int(number)
     return vmul(direction_to_vector(direction), [magnitude, magnitude])
 
@@ -76,8 +78,7 @@ def blit(data):
 def grid(entities):
     columns,rows = os.get_terminal_size()
     data = [[EMPTY for _ in range(columns)] for __ in range(rows)]
-    #hx,hy = int(rows/2), int(columns/2)
-    translate = lambda crds: vadd(vsub(crds, entities[HEAD][0]), [int(rows/2), int(columns/2)]) #vsub([int(rows/2), int(columns/2)], crds)
+    translate = lambda crds: vadd(vsub(crds, entities[ROPE][0]), [int(rows/2), int(columns/2)])
 
     screen_rect = [[0,0], [rows, columns]]
 
@@ -89,31 +90,53 @@ def grid(entities):
 
     return data
 
+def sign(x):
+    if x < 0:
+        return -1
+    elif x > 0:
+        return 1
+    return 0
+
+
+
+def rope(links, move):
+    links[0] = vadd(links[0], move)
+    for a,b in ((n-1, n) for n in range(1,len(links))):
+        head,tail = links[a], links[b]
+        distance = vsub(head,tail)
+        move = [v-sign(v) for v in distance]
+        links[b] = vadd(tail,move) 
+    return links
+
 def simulate(move, entities):
-    old_head = entities[HEAD][0]
-    new_head = vadd(old_head, move)
-    entities[HEAD][0] = new_head
-
-    old_tail = entities[TAIL][0]
-    xdist,ydist = vabs(vsub(old_tail,new_head))
-    if xdist>1 or ydist>1:
-        entities[TAIL][0] = [v for v in old_head] 
-
-    entities[TRAIL].append(entities[TAIL][0])
+    entities[ROPE] = rope(entities[ROPE], move)
+    entities[TRAIL_FIRST].append(entities[ROPE][1])
+    entities[TRAIL_LAST].append(entities[ROPE][-1])
 
     return entities
 
-commands = reduce(add, [list(steps(parse(random_command()))) for _ in range(100)])
+display = False
+try:
+    display = sys.argv[1] == "--display"
+except IndexError:
+    pass 
+
+commands = reduce(add, [list(steps(parse(ln))) for ln in sys.stdin.readlines()])
 
 entities = OrderedDict({
-       #"-":[[0,i] for i in range(-100,100)],
-       #"|":[[i,0] for i in range(-100,100)],
-       #"o": [[0,0]], 
-        TRAIL: [], 
-        HEAD: [[0,0]], 
-        TAIL: [[0,0]],
+        "-":[[0,i] for i in range(-100,100)],
+        "|":[[i,0] for i in range(-100,100)],
+        "o": [[0,0]], 
+        TRAIL_FIRST: [], 
+        TRAIL_LAST: [], 
+        ROPE: [[0,0] for _ in range(10)],
         })
+
 for move in commands:
     entities = simulate(move, entities)
-    blit(grid(entities))
-    time.sleep(.05)
+    if display:
+        blit(grid(entities))
+        time.sleep(.1)
+
+print(f"First trail: {len({tuple(c) for c in entities[TRAIL_FIRST]})}")
+print(f"Last trail: {len({tuple(c) for c in entities[TRAIL_LAST]})}")
