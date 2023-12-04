@@ -145,11 +145,65 @@ void flag_context(matrix_description description, int x, int y, int flags[descri
    int xt, yt, i, j;
    for(i = 0; i < 3; i++){
       for(j = 0; j < 3; j++){
-         xt = x - (i-2);
-         yt = y - (j-2);
+         xt = x + i - 1;
+         yt = y + j - 1;
          if(!coords_out_of_bounds(description, xt, yt)){
             flags[xt][yt] = 1;
          }
+      }
+   }
+}
+
+void print_char_matrix(matrix_description description, char m[description.rows][description.columns]){
+   int x,y;
+   for(x=0;x<(sizeof(*m)/sizeof(*m[0]));x++){
+      for(y=0;y<sizeof(m[0])/sizeof(m[0][0]);y++){
+         printf("%c", m[x][y]);
+      }
+      printf("\n");
+   }
+}
+
+void print_bool_matrix(matrix_description description, int m[description.rows][description.columns]){
+   int x,y;
+   for(x=0;x<(sizeof(*m)/sizeof(*m[0]));x++){
+      for(y=0;y<sizeof(m[0])/sizeof(m[0][0]);y++){
+         if(m[x][y]!=0){
+            printf("o");
+         } else {
+            printf(".");
+         }
+      }
+      printf("\n");
+   }
+}
+
+void print_masked(matrix_description description, int mask[description.rows][description.columns], char matrix[description.rows][description.columns]){
+   char masked[description.rows][description.columns];
+   int x,y;
+   for(x=0;x<description.rows;x++){
+      for(y=0;y<description.columns;y++){
+         if(mask[x][y]!=0){
+            masked[x][y]=matrix[x][y];
+         } else {
+            masked[x][y]='o';
+         }
+      }
+   }
+   print_char_matrix(description, masked);
+}
+
+void reset_running_sum(int *flag, int *concurrent, int *sum, char buffer[16]){
+   int i;
+   if(*concurrent > 0){
+      if(*flag != 0){
+         *sum = *sum + atoi(buffer);
+      } else {
+      }
+      *flag=0;
+      *concurrent=0;
+      for(i=0;i<16;i++){
+         buffer[i]='\0';
       }
    }
 }
@@ -166,12 +220,24 @@ int part_number_sum(matrix_description description, char matrix[description.rows
          }
       }
    }
+
+   int sum = 0;
+   int concurrent_numbers = 0;
+   int flag = 0;
+   char string_int_buffer[16];
    for(x = 0; x < description.rows; x++){
       for(y = 0; y < description.columns; y++){
-         //if(is_number(matrix[x][y]))
+         if(is_number(matrix[x][y])){
+            string_int_buffer[concurrent_numbers] = matrix[x][y];
+            concurrent_numbers++;
+            flag = flag + in_symbol_context[x][y];
+         } else {
+            reset_running_sum(&flag, &concurrent_numbers, &sum, string_int_buffer);
+         }
       }
+      reset_running_sum(&flag, &concurrent_numbers, &sum, string_int_buffer);
    }
-   return 0;
+   return sum;
 }
 
 int main(void) {
@@ -188,6 +254,7 @@ int main(void) {
    fclose(fp);
 
    task_one = part_number_sum(description, matrix);
+   printf("Task one: %i\n", task_one);
 
    exit(EXIT_SUCCESS);
 }
