@@ -8,6 +8,17 @@ import (
 	"fmt"
 )
 
+type intcounter map[int]int
+
+func (i intcounter) Count(n int) {
+	_,success := i[n]
+	if success {
+		i[n]++
+	} else {
+		i[n] = 1
+	}
+}
+
 func main(){
 	dat,_ := os.ReadFile("data")
 	lines := strings.Split(string(dat),"\n")
@@ -24,7 +35,8 @@ func main(){
 	slices.Sort(lefts)
 	slices.Sort(rights)
 	dists := 0
-	seens := make(map[int]int)
+	leftCounts := intcounter{}
+	rightCounts := intcounter{}
 	for i:=0;i<n;i++ {
 		x,y := lefts[i],rights[i]
 		if x > y {
@@ -32,22 +44,15 @@ func main(){
 		} else {
 			dists += y - x
 		}
-		_,success := seens[y]
-		if success {
-			seens[y]++
-		} else {
-			seens[y] = 1
-		}
+		leftCounts.Count(lefts[i])
+		rightCounts.Count(rights[i])
 	}
-	msum := 0
-	for i:=0;i<n;i++ {
-		x := lefts[i]
-		seen,success := seens[x]
-		if !success{
-			seen = 0
-		}
-		msum += lefts[i]*seen
+
+	csum := 0
+	for number,leftCount := range leftCounts {
+		csum += (leftCount * (number*rightCounts[number]))
 	}
+
 	fmt.Printf("1: %v\n",dists)
-	fmt.Printf("2: %v\n",msum)
+	fmt.Printf("2: %v\n",csum)
 }
